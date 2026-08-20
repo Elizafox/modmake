@@ -30,6 +30,15 @@ Imports of `std` and `std.compat` are detected from the P1689 dependency facts,
 and the corresponding toolchain module is built automatically. Set
 `CXX_MODULE_USE_STD := 0` or `1` to override automatic detection.
 
+Intermediate artifacts are written beneath `build/` by default. Set
+`CXX_MODULE_OUTPUT_DIR` before including the fragment to put the compilation
+database, dependency scan, generated module graph, object files, and BMIs
+somewhere else:
+
+```make
+CXX_MODULE_OUTPUT_DIR := out
+```
+
 The fragment exports:
 
 - `CXX_MODULE_BMIS`: locally built BMI/CMI files;
@@ -71,7 +80,7 @@ approximation. The module dependency graph must be acyclic. Source paths and
 flags containing JSON special characters are not yet escaped when the
 compilation database is written. Ordinary Unix project paths and flags work.
 
-Useful overrides include `CXX_MODULE_BUILD_DIR`, `CXX_MODULE_BMI_DIR`,
+Useful overrides include `CXX_MODULE_OUTPUT_DIR`, `CXX_MODULE_BMI_DIR`,
 `CXX_MODULE_OBJECT_DIR`, `CXX_MODULE_FLAGS`, `CXX_MODULE_SCANNER`, and
 `CXX_MODULE_JQ`.
 

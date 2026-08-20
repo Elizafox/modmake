@@ -11,7 +11,10 @@ CXX_MODULE_FLAGS ?= $(CXXFLAGS)
 CXX_MODULE_COMPILER ?= auto
 CXX_MODULE_SCANNER ?= clang-scan-deps
 CXX_MODULE_JQ ?= jq
-CXX_MODULE_BUILD_DIR ?= build
+CXX_MODULE_OUTPUT_DIR ?= build
+# Retain the original name as a compatibility override. Setting either variable
+# before including this fragment relocates all intermediate module artifacts.
+CXX_MODULE_BUILD_DIR ?= $(CXX_MODULE_OUTPUT_DIR)
 CXX_MODULE_BMI_DIR ?= $(CXX_MODULE_BUILD_DIR)/bmi
 CXX_MODULE_OBJECT_DIR ?= $(CXX_MODULE_BUILD_DIR)/obj
 CXX_MODULE_COMPDB ?= $(CXX_MODULE_BUILD_DIR)/compile_commands.json
