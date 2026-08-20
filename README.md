@@ -37,10 +37,10 @@ Individual generated object paths can also be used as ordinary prerequisites.
 
 The standalone examples cover progressively more involved module graphs:
 
-- `examples/make-hello-simple` has one interface and one consumer.
-- `examples/make-hello-complex` adds a partition and implementation unit.
-- `examples/make-std-compat` imports the standard-library compatibility module.
-- `examples/make-torture` stresses a deep, parallel, diamond-shaped graph and
+- `examples/hello-simple` has one interface and one consumer.
+- `examples/hello-complex` adds a partition and implementation unit.
+- `examples/std-compat` imports the standard-library compatibility module.
+- `examples/torture` stresses a deep, parallel, diamond-shaped graph and
   builds the toolchain's `std` module.
 
 Build and run all examples with:
@@ -48,6 +48,9 @@ Build and run all examples with:
 ```sh
 make check
 ```
+
+Build an individual example from the repository root by naming it, for example
+`make std-compat`. The default `all` target builds every example.
 
 Select GCC for all examples with `make check CXX=g++`.
 
