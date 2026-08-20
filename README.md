@@ -26,6 +26,10 @@ External prebuilt modules can be registered as whitespace-separated
 modules can be registered as `name=dependency[,dependency...]` entries in
 `CXX_MODULE_EXTERNAL_REQUIRES`.
 
+Imports of `std` and `std.compat` are detected from the P1689 dependency facts,
+and the corresponding toolchain module is built automatically. Set
+`CXX_MODULE_USE_STD := 0` or `1` to override automatic detection.
+
 The fragment exports:
 
 - `CXX_MODULE_BMIS`: locally built BMI/CMI files;

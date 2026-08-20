@@ -3,7 +3,6 @@
 cxx_is_clang := $(findstring __clang__,$(shell $(CXX) -dM -E -x c++ /dev/null 2>/dev/null))
 CXXFLAGS := -std=c++23 -Wall -Wextra -pedantic $(if $(cxx_is_clang),-stdlib=libc++)
 CXX_SOURCES := src/main.cpp
-CXX_MODULE_USE_STD := 1
 
 include ../../cxx-modules.mk
 

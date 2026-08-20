@@ -21,7 +21,7 @@ CXX_MODULE_EXTENSIONS ?= cppm ixx mpp
 CXX_MODULE_PATHS ?=
 CXX_MODULE_EXTERNAL ?=
 CXX_MODULE_EXTERNAL_REQUIRES ?=
-CXX_MODULE_USE_STD ?= 0
+CXX_MODULE_USE_STD ?= auto
 
 ifeq ($(CXX_MODULE_COMPILER),auto)
 cxx_module_compiler_macros := $(shell $(CXX) $(CXX_MODULE_FLAGS) -dM -E -x c++ /dev/null 2>/dev/null)
@@ -45,7 +45,6 @@ else
 $(error cxx-modules.mk: unsupported CXX_MODULE_COMPILER='$(CXX_MODULE_COMPILER)')
 endif
 
-ifeq ($(CXX_MODULE_USE_STD),1)
 ifeq ($(CXX_MODULE_COMPILER),clang)
 CXX_MODULE_LIBCXX_MANIFEST := $(shell $(CXX) $(CXX_MODULE_FLAGS) -print-file-name=libc++.modules.json)
 cxx_module_clang_resource_dir := $(shell $(CXX) $(CXX_MODULE_FLAGS) -print-resource-dir 2>/dev/null)
@@ -55,18 +54,12 @@ cxx_module_std_source_candidates := \
 	/usr/local/share/libc++/v1/std.cppm \
 	/usr/share/libc++/v1/std.cppm
 CXX_MODULE_STD_SOURCE ?= $(firstword $(foreach source,$(cxx_module_std_source_candidates),$(wildcard $(source))))
-ifeq ($(strip $(CXX_MODULE_STD_SOURCE)),)
-$(error cxx-modules.mk: cannot locate libc++'s std.cppm; set CXX_MODULE_STD_SOURCE explicitly)
-endif
 CXX_MODULE_STD_COMPAT_SOURCE ?= $(wildcard $(dir $(CXX_MODULE_STD_SOURCE))std.compat.cppm)
 CXX_MODULE_STD_BMI ?= $(CXX_MODULE_BMI_DIR)/std.pcm
 CXX_MODULE_STD_OBJECT ?= $(CXX_MODULE_OBJECT_DIR)/std.o
-CXX_MODULE_EXTERNAL += std=$(CXX_MODULE_STD_BMI)
 ifneq ($(strip $(CXX_MODULE_STD_COMPAT_SOURCE)),)
 CXX_MODULE_STD_COMPAT_BMI ?= $(CXX_MODULE_BMI_DIR)/std.compat.pcm
 CXX_MODULE_STD_COMPAT_OBJECT ?= $(CXX_MODULE_OBJECT_DIR)/std.compat.o
-CXX_MODULE_EXTERNAL += std.compat=$(CXX_MODULE_STD_COMPAT_BMI)
-CXX_MODULE_EXTERNAL_REQUIRES += std.compat=std
 endif
 else
 CXX_MODULE_STD_BUILD_DIR ?= $(CXX_MODULE_BUILD_DIR)/libstdc++
@@ -74,8 +67,17 @@ CXX_MODULE_STD_BMI ?= $(CXX_MODULE_STD_BUILD_DIR)/gcm.cache/std.gcm
 CXX_MODULE_STD_COMPAT_BMI ?= $(CXX_MODULE_STD_BUILD_DIR)/gcm.cache/std.compat.gcm
 CXX_MODULE_STD_OBJECT ?= $(CXX_MODULE_STD_BUILD_DIR)/std.o
 CXX_MODULE_STD_COMPAT_OBJECT ?= $(CXX_MODULE_STD_BUILD_DIR)/std.compat.o
-CXX_MODULE_EXTERNAL += std=$(CXX_MODULE_STD_BMI) std.compat=$(CXX_MODULE_STD_COMPAT_BMI)
 CXX_MODULE_MAPPER_ROOT ?= $(abspath $(CXX_MODULE_STD_BUILD_DIR)/gcm.cache)
+endif
+
+ifneq ($(filter 1 auto,$(CXX_MODULE_USE_STD)),)
+CXX_MODULE_EXTERNAL += std=$(CXX_MODULE_STD_BMI)
+ifeq ($(CXX_MODULE_COMPILER),gcc)
+CXX_MODULE_EXTERNAL += std.compat=$(CXX_MODULE_STD_COMPAT_BMI)
+CXX_MODULE_EXTERNAL_REQUIRES += std.compat=std
+else ifneq ($(strip $(CXX_MODULE_STD_COMPAT_SOURCE)),)
+CXX_MODULE_EXTERNAL += std.compat=$(CXX_MODULE_STD_COMPAT_BMI)
+CXX_MODULE_EXTERNAL_REQUIRES += std.compat=std
 endif
 endif
 
@@ -144,6 +146,7 @@ def source($$rule):
   // error("no source for output: \($$rule["primary-output"])");
 
 "# Generated from P1689 dependency facts. Do not edit.",
+"CXX_MODULE_P1689_USES_STD := \([.rules[] | (.requires // [])[] | .["logical-name"] | select(. == "std" or . == "std.compat")] | length > 0 | if . then 1 else 0 end)",
 "CXX_MODULE_BMIS := \([.rules[] | (.provides // [])[] | bmi_name(.["logical-name"])] | unique | join(" "))",
 "CXX_MODULE_OBJECTS := \([.rules[]["primary-output"]] | unique | join(" "))",
 "CXX_MODULE_OUTPUT_GROUPS := \([.rules[] | select((.provides // []) | length > 0) | bmi_name(.provides[0]["logical-name"]) + "=" + .["primary-output"]] | unique | join(" "))",
@@ -174,6 +177,12 @@ cxx_module_adapter_makefile := $(lastword $(MAKEFILE_LIST))
 
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
 -include $(CXX_MODULE_GRAPH)
+endif
+
+ifeq ($(CXX_MODULE_USE_STD),auto)
+cxx_module_use_std := $(CXX_MODULE_P1689_USES_STD)
+else
+cxx_module_use_std := $(CXX_MODULE_USE_STD)
 endif
 
 $(CXX_MODULE_COMPDB): $(cxx_module_all_sources) $(cxx_module_project_makefile) $(cxx_module_adapter_makefile) | $(dir $(CXX_MODULE_COMPDB))
@@ -259,8 +268,11 @@ $(cxx_module_consumer_objects):
 		-c $(CXX_MODULE_SOURCE) -o $@
 endif
 
-ifeq ($(CXX_MODULE_USE_STD),1)
+ifeq ($(cxx_module_use_std),1)
 ifeq ($(CXX_MODULE_COMPILER),clang)
+ifeq ($(strip $(CXX_MODULE_STD_SOURCE)),)
+$(error cxx-modules.mk: cannot locate libc++'s std.cppm; set CXX_MODULE_STD_SOURCE explicitly)
+endif
 $(CXX_MODULE_STD_BMI): $(CXX_MODULE_STD_SOURCE)
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXX_MODULE_FLAGS) -Wno-reserved-module-identifier --precompile $< -o $@
