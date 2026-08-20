@@ -1,5 +1,7 @@
 # modmake
 
+[![Examples](https://github.com/Elizafox/modmake/actions/workflows/examples.yml/badge.svg)](https://github.com/Elizafox/modmake/actions/workflows/examples.yml)
+
 A proof of concept for building C++ modules with GNU Make and one embeddable Make
 fragment. It auto-detects Clang or GCC, asks the selected toolchain for standard
 P1689 dependency facts, and uses `jq` to turn those facts into an included Make
@@ -20,7 +22,9 @@ app: $(CXX_MODULE_OBJECTS)
 Alternatively, list interface sources explicitly with `CXX_MODULE_SOURCES`.
 `CXX_MODULE_PATHS` recursively discovers `.cppm`, `.ixx`, and `.mpp` files.
 External prebuilt modules can be registered as whitespace-separated
-`name=path` entries in `CXX_MODULE_EXTERNAL`.
+`name=path` entries in `CXX_MODULE_EXTERNAL`. Dependencies between external
+modules can be registered as `name=dependency[,dependency...]` entries in
+`CXX_MODULE_EXTERNAL_REQUIRES`.
 
 The fragment exports:
 
@@ -31,21 +35,21 @@ The fragment exports:
 Most projects only need `CXX_MODULE_OBJECTS` for a library or executable target.
 Individual generated object paths can also be used as ordinary prerequisites.
 
-Two standalone examples mirror the simple/complex organization in
-`cxx-modgraph`:
+The standalone examples cover progressively more involved module graphs:
 
 - `examples/make-hello-simple` has one interface and one consumer.
 - `examples/make-hello-complex` adds a partition and implementation unit.
+- `examples/make-std-compat` imports the standard-library compatibility module.
 - `examples/make-torture` stresses a deep, parallel, diamond-shaped graph and
   builds the toolchain's `std` module.
 
-Build and run both with:
+Build and run all examples with:
 
 ```sh
 make check
 ```
 
-Select GCC for both examples with `make check CXX=g++`.
+Select GCC for all examples with `make check CXX=g++`.
 
 ## Scope and caveats
 

@@ -32,7 +32,8 @@ jobs:
             make_args: CXX=clang++
             install: >-
               dnf install --assumeyes
-              clang clang-tools-extra git libcxx-devel libcxxabi-devel jq make
+              clang clang-tools-extra gcc-c++ git
+              libcxx-devel libcxxabi-devel jq make
 
     steps:
       - name: Install dependencies
@@ -42,3 +43,9 @@ jobs:
 
       - name: Test examples
         run: make --jobs check ${{ matrix.make_args }}
+
+      - name: Test examples with GCC
+        if: matrix.distribution == 'Fedora'
+        run: |
+          make clean CXX=g++
+          make --jobs check CXX=g++

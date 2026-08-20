@@ -20,6 +20,7 @@ CXX_MODULE_GRAPH ?= $(CXX_MODULE_BUILD_DIR)/modules.mk
 CXX_MODULE_EXTENSIONS ?= cppm ixx mpp
 CXX_MODULE_PATHS ?=
 CXX_MODULE_EXTERNAL ?=
+CXX_MODULE_EXTERNAL_REQUIRES ?=
 CXX_MODULE_USE_STD ?= 0
 
 ifeq ($(CXX_MODULE_COMPILER),auto)
@@ -57,9 +58,16 @@ CXX_MODULE_STD_SOURCE ?= $(firstword $(foreach source,$(cxx_module_std_source_ca
 ifeq ($(strip $(CXX_MODULE_STD_SOURCE)),)
 $(error cxx-modules.mk: cannot locate libc++'s std.cppm; set CXX_MODULE_STD_SOURCE explicitly)
 endif
+CXX_MODULE_STD_COMPAT_SOURCE ?= $(wildcard $(dir $(CXX_MODULE_STD_SOURCE))std.compat.cppm)
 CXX_MODULE_STD_BMI ?= $(CXX_MODULE_BMI_DIR)/std.pcm
 CXX_MODULE_STD_OBJECT ?= $(CXX_MODULE_OBJECT_DIR)/std.o
 CXX_MODULE_EXTERNAL += std=$(CXX_MODULE_STD_BMI)
+ifneq ($(strip $(CXX_MODULE_STD_COMPAT_SOURCE)),)
+CXX_MODULE_STD_COMPAT_BMI ?= $(CXX_MODULE_BMI_DIR)/std.compat.pcm
+CXX_MODULE_STD_COMPAT_OBJECT ?= $(CXX_MODULE_OBJECT_DIR)/std.compat.o
+CXX_MODULE_EXTERNAL += std.compat=$(CXX_MODULE_STD_COMPAT_BMI)
+CXX_MODULE_EXTERNAL_REQUIRES += std.compat=std
+endif
 else
 CXX_MODULE_STD_BUILD_DIR ?= $(CXX_MODULE_BUILD_DIR)/libstdc++
 CXX_MODULE_STD_BMI ?= $(CXX_MODULE_STD_BUILD_DIR)/gcm.cache/std.gcm
@@ -96,7 +104,13 @@ def bmi_name($$name):
   "\($$bmi_dir)/\($$encoded)\($$bmi_extension)";
 
 ($$externals | split(" ") | map(select(length > 0) | split("=") |
-  {(.[0]): {bmi: (.[1:] | join("=")), requires: []}}) | add // {}) as $$external |
+  {(.[0]): (.[1:] | join("="))}) | add // {}) as $$external_bmis |
+($$external_requires | split(" ") | map(select(length > 0) | split("=") |
+  {(.[0]): (.[1:] | join("=") | split(",") | map(select(length > 0)))}) |
+  add // {}) as $$external_requirements |
+($$external_bmis | to_entries | map({key: .key, value: {
+  bmi: .value, requires: ($$external_requirements[.key] // [])
+}}) | from_entries) as $$external |
 ([.rules[] | . as $$rule | (.provides // [])[] |
   {key: .["logical-name"], value: {
     bmi: bmi_name(.["logical-name"]),
@@ -201,7 +215,9 @@ $(CXX_MODULE_GRAPH): $(CXX_MODULE_SCAN) $(CXX_MODULE_COMPDB) $(cxx_module_adapte
 		--arg bmi_dir $(CXX_MODULE_BMI_DIR) \
 		--arg bmi_extension $(CXX_MODULE_BMI_EXTENSION) \
 		--arg compiler $(CXX_MODULE_COMPILER) \
-		--arg externals '$(CXX_MODULE_EXTERNAL)' -f $@.jq $(CXX_MODULE_SCAN) > $@.tmp
+		--arg externals '$(CXX_MODULE_EXTERNAL)' \
+		--arg external_requires '$(CXX_MODULE_EXTERNAL_REQUIRES)' \
+		-f $@.jq $(CXX_MODULE_SCAN) > $@.tmp
 	@mv $@.tmp $@
 	@rm -f $@.jq
 
@@ -254,6 +270,17 @@ $(CXX_MODULE_STD_OBJECT): $(CXX_MODULE_STD_BMI)
 	$(CXX) $(CXX_MODULE_FLAGS) -c $< -o $@
 
 CXX_MODULE_OBJECTS += $(CXX_MODULE_STD_OBJECT)
+ifneq ($(strip $(CXX_MODULE_STD_COMPAT_SOURCE)),)
+$(CXX_MODULE_STD_COMPAT_BMI): $(CXX_MODULE_STD_COMPAT_SOURCE) $(CXX_MODULE_STD_BMI)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXX_MODULE_FLAGS) -fmodule-file=std=$(CXX_MODULE_STD_BMI) --precompile $< -o $@
+
+$(CXX_MODULE_STD_COMPAT_OBJECT): $(CXX_MODULE_STD_COMPAT_BMI)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXX_MODULE_FLAGS) -fmodule-file=std=$(CXX_MODULE_STD_BMI) -c $< -o $@
+
+CXX_MODULE_OBJECTS += $(CXX_MODULE_STD_COMPAT_OBJECT)
+endif
 else
 $(CXX_MODULE_STD_BMI) $(CXX_MODULE_STD_COMPAT_BMI) $(CXX_MODULE_STD_OBJECT) $(CXX_MODULE_STD_COMPAT_OBJECT) &:
 	@mkdir -p $(CXX_MODULE_STD_BUILD_DIR)
