@@ -47,7 +47,16 @@ endif
 ifeq ($(CXX_MODULE_USE_STD),1)
 ifeq ($(CXX_MODULE_COMPILER),clang)
 CXX_MODULE_LIBCXX_MANIFEST := $(shell $(CXX) $(CXX_MODULE_FLAGS) -print-file-name=libc++.modules.json)
-CXX_MODULE_STD_SOURCE ?= $(abspath $(dir $(CXX_MODULE_LIBCXX_MANIFEST))/../share/libc++/v1/std.cppm)
+cxx_module_clang_resource_dir := $(shell $(CXX) $(CXX_MODULE_FLAGS) -print-resource-dir 2>/dev/null)
+cxx_module_std_source_candidates := \
+	$(abspath $(cxx_module_clang_resource_dir)/../../../share/libc++/v1/std.cppm) \
+	$(abspath $(dir $(CXX_MODULE_LIBCXX_MANIFEST))/../share/libc++/v1/std.cppm) \
+	/usr/local/share/libc++/v1/std.cppm \
+	/usr/share/libc++/v1/std.cppm
+CXX_MODULE_STD_SOURCE ?= $(firstword $(foreach source,$(cxx_module_std_source_candidates),$(wildcard $(source))))
+ifeq ($(strip $(CXX_MODULE_STD_SOURCE)),)
+$(error cxx-modules.mk: cannot locate libc++'s std.cppm; set CXX_MODULE_STD_SOURCE explicitly)
+endif
 CXX_MODULE_STD_BMI ?= $(CXX_MODULE_BMI_DIR)/std.pcm
 CXX_MODULE_STD_OBJECT ?= $(CXX_MODULE_OBJECT_DIR)/std.o
 CXX_MODULE_EXTERNAL += std=$(CXX_MODULE_STD_BMI)

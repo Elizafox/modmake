@@ -20,12 +20,16 @@ jobs:
         include:
           - distribution: Ubuntu
             image: ubuntu:latest
+            make_args: >-
+              CXX=clang++-22
+              CXX_MODULE_SCANNER=clang-scan-deps-22
             install: >-
               apt-get update &&
               DEBIAN_FRONTEND=noninteractive apt-get install --yes
-              clang clang-tools git libc++-dev libc++abi-dev jq make
+              clang-22 clang-tools-22 git libc++-22-dev libc++abi-22-dev jq make
           - distribution: Fedora
             image: fedora:latest
+            make_args: CXX=clang++
             install: >-
               dnf install --assumeyes
               clang clang-tools-extra git libcxx-devel libcxxabi-devel jq make
@@ -37,4 +41,4 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Test examples
-        run: make --jobs check CXX=clang++
+        run: make --jobs check ${{ matrix.make_args }}
