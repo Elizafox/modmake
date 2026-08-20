@@ -1,0 +1,3 @@
+# Generated build trees (including BMIs, objects, scans, mapper files, and
+# compilation databases).
+build/

@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: 0BSD
+
+name: Examples
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  examples:
+    name: ${{ matrix.distribution }} latest
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distribution: Ubuntu
+            image: ubuntu:latest
+            install: >-
+              apt-get update &&
+              DEBIAN_FRONTEND=noninteractive apt-get install --yes
+              clang clang-tools git libc++-dev libc++abi-dev jq make
+          - distribution: Fedora
+            image: fedora:latest
+            install: >-
+              dnf install --assumeyes
+              clang clang-tools-extra git libcxx-devel libcxxabi-devel jq make
+
+    steps:
+      - name: Install dependencies
+        run: ${{ matrix.install }}
+
+      - uses: actions/checkout@v4
+
+      - name: Test examples
+        run: make --jobs check CXX=clang++
