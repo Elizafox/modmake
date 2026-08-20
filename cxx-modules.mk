@@ -230,7 +230,7 @@ $(CXX_MODULE_BMIS):
 
 $(CXX_MODULE_OBJECTS):
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXX_MODULE_FLAGS) \
+	$(CXX) $(if $(CXX_MODULE_PCM),$(filter-out -stdlib=%,$(CXX_MODULE_FLAGS)),$(CXX_MODULE_FLAGS)) \
 		$(foreach m,$(CXX_MODULE_IMPORTS),-fmodule-file=$(m)) \
 		-c $(if $(CXX_MODULE_PCM),$(CXX_MODULE_PCM),$(CXX_MODULE_SOURCE)) -o $@
 else
@@ -263,21 +263,23 @@ ifeq ($(CXX_MODULE_USE_STD),1)
 ifeq ($(CXX_MODULE_COMPILER),clang)
 $(CXX_MODULE_STD_BMI): $(CXX_MODULE_STD_SOURCE)
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXX_MODULE_FLAGS) --precompile $< -o $@
+	$(CXX) $(CXX_MODULE_FLAGS) -Wno-reserved-module-identifier --precompile $< -o $@
 
 $(CXX_MODULE_STD_OBJECT): $(CXX_MODULE_STD_BMI)
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXX_MODULE_FLAGS) -c $< -o $@
+	$(CXX) $(filter-out -stdlib=%,$(CXX_MODULE_FLAGS)) -c $< -o $@
 
 CXX_MODULE_OBJECTS += $(CXX_MODULE_STD_OBJECT)
 ifneq ($(strip $(CXX_MODULE_STD_COMPAT_SOURCE)),)
 $(CXX_MODULE_STD_COMPAT_BMI): $(CXX_MODULE_STD_COMPAT_SOURCE) $(CXX_MODULE_STD_BMI)
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXX_MODULE_FLAGS) -fmodule-file=std=$(CXX_MODULE_STD_BMI) --precompile $< -o $@
+	$(CXX) $(CXX_MODULE_FLAGS) -Wno-reserved-module-identifier \
+		-fmodule-file=std=$(CXX_MODULE_STD_BMI) --precompile $< -o $@
 
 $(CXX_MODULE_STD_COMPAT_OBJECT): $(CXX_MODULE_STD_COMPAT_BMI)
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXX_MODULE_FLAGS) -fmodule-file=std=$(CXX_MODULE_STD_BMI) -c $< -o $@
+	$(CXX) $(filter-out -stdlib=%,$(CXX_MODULE_FLAGS)) \
+		-fmodule-file=std=$(CXX_MODULE_STD_BMI) -c $< -o $@
 
 CXX_MODULE_OBJECTS += $(CXX_MODULE_STD_COMPAT_OBJECT)
 endif

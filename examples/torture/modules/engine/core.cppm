@@ -1,4 +1,4 @@
-module engine:core;
+export module engine:core;
 import std;
 import data.model;
 import math.calc;
