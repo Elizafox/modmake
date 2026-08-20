@@ -2,4 +2,7 @@
 
 import std.compat;
 
-int main() { return ::puts("Hello from std.compat!") < 0; }
+int main()
+{
+    return ::puts("Hello from std.compat!") < 0;
+}
