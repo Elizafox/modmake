@@ -1,4 +1,4 @@
-# cxx-modgraph-make
+# modmake
 
 A proof of concept for building C++ modules with GNU Make and one embeddable Make
 fragment. It auto-detects Clang or GCC, asks the selected toolchain for standard
